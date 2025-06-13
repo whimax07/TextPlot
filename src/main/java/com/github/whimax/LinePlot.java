@@ -45,10 +45,10 @@ public class LinePlot {
         final List<Double> averageDataY = windowAverage(binSize, yData);
         final double rangeLow = averageDataY.stream().min(Double::compareTo).orElseThrow();
         final double rangeHigh = averageDataY.stream().max(Double::compareTo).orElseThrow();
-        final double yScale = (rangeHigh - rangeLow) / (height - 1);
+        final double yScale = (rangeHigh - rangeLow) / (height);
         final List<Integer> plotData = averageDataY.stream()
                 .map(y -> y - rangeLow)
-                .map(y -> y * yScale)
+                .map(y -> y / yScale)
                 // We have 2 positions per cell.
                 .map(y -> y * 2)
                 .map(Math::round)
@@ -64,7 +64,7 @@ public class LinePlot {
         }
 
         final List<String> ticksY = new ArrayList<>();
-        for (int i = height - 1; i >= 0; i--) {
+        for (int i = 0; i <= height; i++) {
             final double y = rangeLow + (yScale * i);
             final String clampedString = clampString(y);
             ticksY.add(clampedString);
@@ -73,17 +73,19 @@ public class LinePlot {
         final String ticksX = writeTicksX(averageDataX);
 
         final ArrayList<String> lines = new ArrayList<>();
-        for (int i = height - 1; i >= 0; i--) {
+        for (int i = height; i >= 0; i--) {
             final StringBuilder line = new StringBuilder(" ".repeat(NUMERIC_LENGTH + width));
 
             final String yTick = ticksY.get(i);
             line.replace(NUMERIC_LENGTH - yTick.length(), NUMERIC_LENGTH, yTick);
 
-            for (int x : plotMap.get((i * 2) + 1)) {
-                line.setCharAt(x, upper);
+            final ArrayList<Integer> lowerPoints = plotMap.get(i * 2);
+            final ArrayList<Integer> upperPoints = plotMap.get((i * 2) + 1);
+            if (upperPoints != null) for (int x : upperPoints) {
+                line.setCharAt(x + NUMERIC_LENGTH, upper);
             }
-            for (int x : plotMap.get(i * 2)) {
-                line.setCharAt(x, lower);
+            if (lowerPoints != null) for (int x : lowerPoints) {
+                line.setCharAt(x + NUMERIC_LENGTH, lower);
             }
 
             lines.add(line.toString());
@@ -97,7 +99,6 @@ public class LinePlot {
         final int tickGap = NUMERIC_LENGTH + 2;
         // Half of NUMERIC_LENGTH before and after the axis.
         final StringBuilder stringBuilder = new StringBuilder(" ".repeat(width + NUMERIC_LENGTH));
-        final int leftOffset = NUMERIC_LENGTH / 2;
 
         for (int i = 0; i < averageData.size(); i++) {
             if (i % tickGap != 0) continue;
@@ -106,7 +107,7 @@ public class LinePlot {
             final String clamped = clampString(val);
             // "i" is the centre point for the tick on the x-axis, we overflow the left side so that the label at 0 is
             // centred.
-            final int startIndex = leftOffset + i - (clamped.length() / 2);
+            final int startIndex = NUMERIC_LENGTH + i - (clamped.length() / 2);
             stringBuilder.replace(startIndex, startIndex + clamped.length(), clamped);
         }
 
