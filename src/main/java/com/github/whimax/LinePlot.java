@@ -7,10 +7,6 @@ import java.util.stream.Gatherers;
 
 public class LinePlot {
 
-    private static final char UPPER_HALF = '▀';
-    private static final char LOWER_HALF = '▄';
-    private static final char UPPER_ASIC = '-';
-    private static final char LOWER_ASIC = '_';
     private static final int NUMERIC_LENGTH = 8;
 
     private final List<Double> xData;
@@ -22,13 +18,13 @@ public class LinePlot {
 
 
 
-    public LinePlot(List<Double> xData, List<Double> yData, int width, int height, boolean utf8) {
+    public LinePlot(List<Double> xData, List<Double> yData, int width, int height, CharSet charSet) {
         this.xData = xData;
         this.yData = yData;
         this.width = width;
         this.height = height;
-        this.upper = utf8 ? UPPER_HALF : UPPER_ASIC;
-        this.lower = utf8 ? LOWER_HALF : LOWER_ASIC;
+        this.upper = charSet.upper;
+        this.lower = charSet.lower;
     }
 
 
@@ -45,7 +41,13 @@ public class LinePlot {
         final List<Double> averageDataY = windowAverage(binSize, yData);
         final double rangeLow = averageDataY.stream().min(Double::compareTo).orElseThrow();
         final double rangeHigh = averageDataY.stream().max(Double::compareTo).orElseThrow();
-        final double yScale = (rangeHigh - rangeLow) / (height);
+        final double yScale = (rangeHigh - rangeLow) / height;
+        // plotData will be less than or equal to height.
+        // res = (y - rangeLow) / yScale
+        //     = (y - rangeLow) / ((rangeHigh - rangeLow) / height)
+        //     = ((y - rangeLow) * height) / (rangeHigh - rangeLow)
+        //    <= ((rangeHigh - rangeLow) * height) / (rangeHigh - rangeLow)
+        //    <= height
         final List<Integer> plotData = averageDataY.stream()
                 .map(y -> y - rangeLow)
                 .map(y -> y / yScale)
@@ -107,7 +109,7 @@ public class LinePlot {
             final String clamped = clampString(val);
             // "i" is the centre point for the tick on the x-axis, we overflow the left side so that the label at 0 is
             // centred.
-            final int startIndex = NUMERIC_LENGTH + i - (clamped.length() / 2);
+            final int startIndex = NUMERIC_LENGTH + i;
             stringBuilder.replace(startIndex, startIndex + clamped.length(), clamped);
         }
 
@@ -130,6 +132,23 @@ public class LinePlot {
         final String asString = Double.toString(toClamp);
         if (asString.length() <= NUMERIC_LENGTH) return asString;
         return asString.substring(0, NUMERIC_LENGTH - 3) + "...";
+    }
+
+
+
+    public enum CharSet {
+        ASIC('-', '_'),
+        BLOCK('▀', '▄'),
+        LINE('—', '_')
+        ;
+
+        final char upper;
+        final char lower;
+
+        CharSet(char upper, char lower) {
+            this.upper = upper;
+            this.lower = lower;
+        }
     }
 
 }
