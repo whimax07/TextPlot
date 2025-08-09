@@ -1,8 +1,10 @@
 package com.github.whimax;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Gatherers;
 
 public class LinePlot {
@@ -15,16 +17,25 @@ public class LinePlot {
     private final int height;
     private final char upper;
     private final char lower;
+    private final Function<List<Double>, Double> yAverager;
 
 
 
-    public LinePlot(List<Double> xData, List<Double> yData, int width, int height, CharSet charSet) {
+    public LinePlot(
+            List<Double> xData,
+            List<Double> yData,
+            int width,
+            int height,
+            CharSet charSet,
+            Function<List<Double>, Double> yAverager
+    ) {
         this.xData = xData;
         this.yData = yData;
         this.width = width;
         this.height = height;
         this.upper = charSet.upper;
         this.lower = charSet.lower;
+        this.yAverager = yAverager;
     }
 
 
@@ -36,9 +47,9 @@ public class LinePlot {
     public List<String> lines() {
         // Round up.
         final int binSize = (xData.size() + width - 1) / width;
-        final List<Double> averageDataX = windowAverage(binSize, xData);
+        final List<Double> averageDataX = windowAverage(binSize, xData, Averager.MEAN.averager);
 
-        final List<Double> averageDataY = windowAverage(binSize, yData);
+        final List<Double> averageDataY = windowAverage(binSize, yData, yAverager);
         final double rangeLow = averageDataY.stream().min(Double::compareTo).orElseThrow();
         final double rangeHigh = averageDataY.stream().max(Double::compareTo).orElseThrow();
         final double yScale = (rangeHigh - rangeLow) / height;
@@ -124,13 +135,12 @@ public class LinePlot {
 
 
 
-    private static List<Double> windowAverage(int windowSize, List<Double> data) {
+    private static List<Double> windowAverage(
+            int windowSize, List<Double> data, Function<List<Double>, Double> yAverager
+    ) {
         return data.stream()
                 .gather(Gatherers.windowFixed(windowSize))
-                .map(window -> {
-                    final double sum = window.stream().mapToDouble(Double::doubleValue).sum();
-                    return sum / window.size();
-                })
+                .map(yAverager)
                 .toList();
     }
 
@@ -149,12 +159,29 @@ public class LinePlot {
         ;
 
         final char upper;
-        final char lower;
 
+        final char lower;
         CharSet(char upper, char lower) {
             this.upper = upper;
             this.lower = lower;
         }
+
+    }
+
+    public enum Averager {
+        MEAN(l -> l.stream().reduce(0.0, Double::sum) / l.size()),
+        HOLD_HIGH(l -> l.stream().max(Comparator.naturalOrder()).orElseThrow()),
+        HOLD_LOW(l -> l.stream().min(Comparator.naturalOrder()).orElseThrow()),
+        FIRST(List::getFirst),
+        LAST(List::getLast)
+        ;
+
+        final Function<List<Double>, Double> averager;
+
+        Averager(Function<List<Double>, Double> averager) {
+            this.averager = averager;
+        }
+
     }
 
 }
