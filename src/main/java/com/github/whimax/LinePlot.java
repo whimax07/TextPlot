@@ -72,7 +72,9 @@ public class LinePlot {
             ticksY.add(clampedString);
         }
 
-        final String ticksX = writeTicksX(averageDataX);
+        final int stretchFactor = width / averageDataX.size();
+
+        final String ticksX = writeTicksX(averageDataX, stretchFactor);
 
         final ArrayList<String> lines = new ArrayList<>();
         for (int i = height; i >= 0; i--) {
@@ -84,10 +86,14 @@ public class LinePlot {
             final ArrayList<Integer> lowerPoints = plotMap.get(i * 2);
             final ArrayList<Integer> upperPoints = plotMap.get((i * 2) + 1);
             if (upperPoints != null) for (int x : upperPoints) {
-                line.setCharAt(x + NUMERIC_LENGTH, upper);
+                for (int stretch = 0; stretch < stretchFactor; stretch++) {
+                    line.setCharAt((x * stretchFactor) + stretch + NUMERIC_LENGTH, upper);
+                }
             }
             if (lowerPoints != null) for (int x : lowerPoints) {
-                line.setCharAt(x + NUMERIC_LENGTH, lower);
+                for (int stretch = 0; stretch < stretchFactor; stretch++) {
+                    line.setCharAt((x * stretchFactor) + stretch + NUMERIC_LENGTH, lower);
+                }
             }
 
             lines.add(line.toString());
@@ -97,7 +103,7 @@ public class LinePlot {
         return lines;
     }
 
-    protected String writeTicksX(List<Double> averageData) {
+    protected String writeTicksX(List<Double> averageData, int stretch) {
         final int tickGap = NUMERIC_LENGTH + 2;
         // Half of NUMERIC_LENGTH before and after the axis.
         final StringBuilder stringBuilder = new StringBuilder(" ".repeat(width + NUMERIC_LENGTH));
@@ -109,7 +115,7 @@ public class LinePlot {
             final String clamped = clampString(val);
             // "i" is the centre point for the tick on the x-axis, we overflow the left side so that the label at 0 is
             // centred.
-            final int startIndex = NUMERIC_LENGTH + i;
+            final int startIndex = NUMERIC_LENGTH + (i * stretch);
             stringBuilder.replace(startIndex, startIndex + clamped.length(), clamped);
         }
 
