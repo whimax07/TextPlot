@@ -116,11 +116,13 @@ public class LinePlot {
 
     protected String writeTicksX(List<Double> averageData, int stretch) {
         final int tickGap = NUMERIC_LENGTH + 2;
+        // Ceiling division.
+        final int tickPeriod = (tickGap + (stretch - 1)) / stretch;
         // Half of NUMERIC_LENGTH before and after the axis.
         final StringBuilder stringBuilder = new StringBuilder(" ".repeat(width + NUMERIC_LENGTH));
 
         for (int i = 0; i < averageData.size(); i++) {
-            if (i % tickGap != 0) continue;
+            if (i % tickPeriod != 0) continue;
 
             final double val = averageData.get(i);
             final String clamped = clampString(val);
